@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burç Uygulaması ✦</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='flatpickr/flatpickr.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='flatpickr/themes/dark.css') }}">
+<script src="{{ url_for('static', filename='flatpickr/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='flatpickr/l10n/tr.js') }}"></script>
+<style>
+  :root{
+    --bg:#0e1020; --bg2:#171a30; --card:#1d2140; --line:#2c3160;
+    --txt:#e7e8f5; --dim:#9aa0c8; --accent:#c9a84a; --accent2:#7c83ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:
+       radial-gradient(1200px 600px at 50% -10%,#23264a,var(--bg));color:var(--txt);min-height:100vh}
+  /* tam ekran gökyüzü */
+  .gokyuzu{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden}
+  .gokyuzu .kat{position:absolute;top:0;left:0;width:2px;height:2px;border-radius:50%;background:#fff}
+  .gokyuzu .k1{animation:twinkleA 5s ease-in-out infinite alternate, suzulA 70s ease-in-out infinite alternate}
+  .gokyuzu .k2{animation:twinkleB 8s ease-in-out infinite alternate, suzulB 100s ease-in-out infinite alternate}
+  @keyframes twinkleA{from{opacity:.35}to{opacity:.95}}
+  @keyframes twinkleB{from{opacity:.5}to{opacity:1}}
+  @keyframes suzulA{to{transform:translate(14px,-26px)}}
+  @keyframes suzulB{to{transform:translate(-18px,22px)}}
+  .kayan{position:absolute;width:140px;height:2px;border-radius:2px;opacity:0;
+    background:linear-gradient(90deg,transparent,#dfe6ff 60%,#fff);
+    filter:drop-shadow(0 0 6px #cfd6ff);transform:rotate(-22deg)}
+  .kayan.a{top:12%;left:78%;animation:kayanYildiz 9s linear infinite}
+  .kayan.b{top:30%;left:90%;animation:kayanYildiz 13s linear 4s infinite}
+  @keyframes kayanYildiz{0%{opacity:0;transform:translate(0,0) rotate(-22deg)}
+    4%{opacity:.9}16%{opacity:0}100%{opacity:0;transform:translate(-680px,300px) rotate(-22deg)}}
+  /* dönen burç halkası */
+  #zodyak-halka{position:absolute;top:46%;left:50%;width:330px;height:330px;
+    transform:translate(-50%,-50%);z-index:0;opacity:.12;pointer-events:none;
+    animation:donHalka 140s linear infinite}
+  @keyframes donHalka{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  header{position:relative;text-align:center;padding:40px 16px 18px;overflow:hidden}
+  /* yıldız serpintisi */
+  header::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 12% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 80% 20%, #cfd6ff, transparent),
+      radial-gradient(1px 1px at 25% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 65% 60%, #ffe9b0, transparent),
+      radial-gradient(1.5px 1.5px at 90% 75%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 15%, #cfd6ff, transparent),
+      radial-gradient(1px 1px at 55% 85%, #fff, transparent);
+    opacity:.55;animation:yildizParla 4s ease-in-out infinite alternate}
+  @keyframes yildizParla{from{opacity:.30}to{opacity:.75}}
+  header h1{position:relative;z-index:2;margin:0;font-weight:800;font-size:clamp(28px,6vw,44px);
+    letter-spacing:2px;
+    background:linear-gradient(100deg,#f6d365 0%,#c9a84a 20%,#a78bfa 50%,#7c83ff 70%,#f6d365 100%);
+    background-size:220% auto;-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 2px 14px rgba(124,131,255,.35));
+    animation:basliklKay 6s linear infinite}
+  @keyframes basliklKay{to{background-position:220% center}}
+  header h1 .yildiz{-webkit-text-fill-color:#f6d365;color:#f6d365;display:inline-block;
+    animation:donParla 3s ease-in-out infinite}
+  header h1 .yildiz.sag{animation-delay:1.5s}
+  @keyframes donParla{0%,100%{transform:scale(1) rotate(0);opacity:.8}
+    50%{transform:scale(1.25) rotate(180deg);opacity:1}}
+  header p{position:relative;z-index:2;color:var(--dim);margin:10px 0 0;font-size:14px;letter-spacing:.3px}
+  header p b{color:var(--accent);font-weight:600}
+  .tabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+  .tab{background:var(--bg2);color:var(--dim);border:1px solid var(--line);
+       padding:9px 16px;border-radius:20px;cursor:pointer;font-size:14px}
+  .tab.active{background:var(--accent);color:#1a1505;border-color:var(--accent);font-weight:600}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:20px;margin-bottom:16px}
+  label{display:block;font-size:13px;color:var(--dim);margin:10px 0 4px}
+  input,select{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);
+        background:var(--bg2);color:var(--txt);font-family:inherit;font-size:17px;line-height:1.3}
+  select option{font-family:inherit;font-size:17px;padding:10px;background:var(--bg2);color:var(--txt)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:120px}
+  button.go{margin-top:16px;width:100%;padding:12px;border:none;border-radius:10px;
+        background:linear-gradient(90deg,var(--accent2),var(--accent));color:#11122a;
+        font-weight:700;font-size:15px;cursor:pointer}
+  .panel{display:none}
+  .panel.active{display:block}
+  .result{margin-top:14px}
+  .big{font-size:22px;font-weight:700;color:var(--accent)}
+  .pill{display:inline-block;background:var(--bg2);border:1px solid var(--line);
+        border-radius:14px;padding:4px 10px;margin:3px 4px 0 0;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+  th,td{border:1px solid var(--line);padding:5px 6px;text-align:center}
+  th{color:var(--dim)}
+  .star{color:var(--accent);letter-spacing:2px;font-size:18px}
+  .muted{color:var(--dim);font-size:12px;margin-top:10px}
+  .info{display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;
+        border-radius:50%;background:var(--line);color:var(--txt);font-size:11px;cursor:help}
+  .utc-rozet{background:#243a2c;border-color:#3ad29f;color:#7fe3b4}
+  .yorum-alan{margin:8px 0;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid var(--line)}
+  .yorum-alan b{color:var(--accent2)}
+  svg{display:block;margin:0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+  /* flatpickr koyu tema uyarlaması */
+  .flatpickr-calendar{background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .flatpickr-months,.flatpickr-weekdays{background:var(--card)}
+  .flatpickr-month,.flatpickr-current-month,.flatpickr-weekday{color:var(--txt)!important;fill:var(--txt)}
+  .flatpickr-day{color:var(--txt);border-radius:8px}
+  .flatpickr-day:hover{background:var(--bg2)}
+  .flatpickr-day.selected,.flatpickr-day.selected:hover{background:var(--accent);border-color:var(--accent);color:#1a1505}
+  .flatpickr-day.today{border-color:var(--accent2)}
+  .flatpickr-day.flatpickr-disabled,.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay{color:var(--dim)}
+  .flatpickr-monthDropdown-months,.numInputWrapper{background:var(--card);color:var(--txt)}
+  .flatpickr-prev-month svg,.flatpickr-next-month svg{fill:var(--txt)}
+  .cark-sarmal{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:14px;margin:14px 0}
+  .cark-sarmal>svg{flex:1 1 300px;max-width:380px}
+  .lejant{display:flex;gap:18px;font-size:12.5px}
+  .lejant-bas{color:var(--accent);font-weight:600;margin-bottom:4px;font-size:12px}
+  .lejant-sat{color:var(--txt);line-height:1.55;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="gokyuzu">
+  <div class="kat k1" id="kat1"></div>
+  <div class="kat k2" id="kat2"></div>
+  <span class="kayan a"></span>
+  <span class="kayan b"></span>
+</div>
+<header>
+  <div id="zodyak-halka"></div>
+  <h1><span class="yildiz">✦</span> Burç Uygulaması <span class="yildiz sag">✦</span></h1>
+  <p>Güneş burcu <b>·</b> Yükselen &amp; doğum haritası <b>·</b> Burçlar Uyumu <b>·</b> Günlük/Haftalık Yorum</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-t="burc">Burcumu Bul</div>
+  <div class="tab" data-t="yukselen">Yükselen + Harita</div>
+  <div class="tab" data-t="transit">Gerçek Transit</div>
+  <div class="tab" data-t="uyum">Burçlar Uyumu</div>
+  <div class="tab" data-t="yorum">Burç Yorumları</div>
+</div>
+
+<div class="wrap">
+
+  <!-- BURÇ BUL -->
+  <div class="panel active" id="p-burc">
+    <div class="card">
+      <label>Doğum tarihiniz</label>
+      <input type="date" id="b-tarih">
+      <button class="go" onclick="burcBul()">Burcumu Göster</button>
+      <div class="result" id="b-sonuc"></div>
+    </div>
+  </div>
+
+  <!-- YUKSELEN -->
+  <div class="panel" id="p-yukselen">
+    <div class="card">
+      <div class="row">
+        <div><label>Doğum tarihi</label><input type="date" id="y-tarih"></div>
+        <div><label>Doğum saati</label><input type="time" id="y-saat" value="12:00"></div>
+      </div>
+      <div class="row">
+        <div><label>Doğum yeri</label><select id="y-sehir"></select></div>
+      </div>
+      <button class="go" onclick="yukselenBul()">Hesapla</button>
+      <div class="result" id="y-sonuc"></div>
+    </div>
+  </div>
+
+  <!-- TRANSIT -->
+  <div class="panel" id="p-transit">
+    <div class="card">
+      <p class="muted" style="margin-top:0">Gerçek astrolojik hesap: bugünkü gezegenlerin doğum haritanla yaptığı açılara göre yorum.</p>
+      <div class="row">
+        <div><label>Doğum tarihi</label><input type="date" id="t-tarih"></div>
+        <div><label>Doğum saati</label><input type="time" id="t-saat" value="12:00"></div>
+      </div>
+      <div class="row">
+        <div><label>Doğum yeri</label><select id="t-sehir"></select></div>
+      </div>
+      <label>Hangi gün için?</label><input type="date" id="t-gun">
+      <button class="go" onclick="transitBul()">Transit Yorumunu Getir</button>
+      <div class="result" id="t-sonuc"></div>
+    </div>
+  </div>
+
+  <!-- UYUM -->
+  <div class="panel" id="p-uyum">
+    <div class="card">
+      <div class="row">
+        <div><label>1. burç</label><select id="u-b1"></select></div>
+        <div><label>2. burç</label><select id="u-b2"></select></div>
+      </div>
+      <button class="go" onclick="uyumBul()">Uyumu Göster</button>
+      <div class="result" id="u-sonuc"></div>
+      <button class="go" style="background:var(--bg2);color:var(--dim)" onclick="uyumMatris()">Tüm Uyum Matrisi</button>
+      <div class="result" id="u-matris"></div>
+    </div>
+  </div>
+
+  <!-- YORUM -->
+  <div class="panel" id="p-yorum">
+    <div class="card">
+      <div class="row">
+        <div><label>Burç</label><select id="o-burc"></select></div>
+        <div><label>Tür</label>
+          <select id="o-tip"><option value="gunluk">Günlük</option><option value="haftalik">Haftalık</option></select>
+        </div>
+      </div>
+      <button class="go" onclick="yorumBul()">Yorumu Getir</button>
+      <div class="result" id="o-sonuc"></div>
+      <div class="muted">Not: Yorumlar şablon temellidir, eğlence amaçlıdır.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer style="text-align:center;padding:20px 0 34px">
+  <img src="{{ url_for('static', filename='macar-logo.png') }}" alt="© M.Acar"
+       style="height:42px;width:auto;opacity:0.9">
+</footer>
+
+<script>
+const BURCLAR = {{ burclar|tojson }};
+const SEHIRLER = {{ sehirler|tojson }};
+const ASTRO = {{ astro_var|tojson }};
+const BURC_GLYPH = {Koç:"♈",Boğa:"♉",İkizler:"♊",Yengeç:"♋",Aslan:"♌",Başak:"♍",
+  Terazi:"♎",Akrep:"♏",Yay:"♐",Oğlak:"♑",Kova:"♒",Balık:"♓"};
+const GEZ_GLYPH = {"Güneş":"☉","Ay":"☽","Merkür":"☿","Venüs":"♀","Mars":"♂",
+  "Jüpiter":"♃","Satürn":"♄","Uranüs":"♅","Neptün":"♆","Plüton":"♇"};
+
+// sekmeler
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('p-'+t.dataset.t).classList.add('active');
+});
+
+// select doldur
+function doldur(id, arr, mapper){const s=document.getElementById(id);
+  arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=mapper?mapper(v):v;s.appendChild(o);});}
+doldur('u-b1',BURCLAR);doldur('u-b2',BURCLAR);doldur('o-burc',BURCLAR);
+if(ASTRO){doldur('y-sehir',SEHIRLER,v=>v[0].toUpperCase()+v.slice(1));
+  doldur('t-sehir',SEHIRLER,v=>v[0].toUpperCase()+v.slice(1));}
+else document.getElementById('y-sonuc').innerHTML='<p class="muted">pyswisseph kurulu değil; yükselen hesabı devre dışı.</p>';
+
+const TON_RENK={"yoğunlaştırıcı":"#c9a84a","destekleyici":"#3ad29f","akıcı":"#3ad29f",
+  "zorlayıcı":"#e0617a","gerilimli":"#e0617a"};
+
+const AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz',
+  'Ağustos','Eylül','Ekim','Kasım','Aralık'];
+// ISO tarihi (2026-06-29) -> "29 Haziran" (yil=true ise "29 Haziran 2026")
+function trTarih(iso,yil=true){const [yy,mm,dd]=iso.split('-');
+  return `${parseInt(dd)} ${AYLAR[parseInt(mm)-1]}${yil?' '+yy:''}`;}
+
+// --- Sekmeler arası ortak doğum bilgisi senkronizasyonu ---
+const SYNC = {
+  tarih: ['b-tarih','y-tarih','t-tarih'],
+  saat:  ['y-saat','t-saat'],
+  sehir: ['y-sehir','t-sehir'],
+};
+let _sync_kilit=false;
+const FP={};  // flatpickr örnekleri: {input_id: instance}
+function _val(id){const e=document.getElementById(id);return e?e.value:null;}
+function _set(id,v){
+  if(FP[id]){if(FP[id].input.value!==v) FP[id].setDate(v,false);return;}
+  const e=document.getElementById(id);if(e&&e.value!==v)e.value=v;}
+
+// Türkçe takvim (flatpickr). Alt giriş "22 Haziran 2026" gösterir,
+// altta saklanan değer ISO (YYYY-MM-DD) kalır — kod ISO bekliyor.
+function initDatepickers(){
+  if(!window.flatpickr) return;          // CDN yüklenmediyse native input kalır
+  if(flatpickr.l10ns && flatpickr.l10ns.tr) flatpickr.localize(flatpickr.l10ns.tr);
+  ['b-tarih','y-tarih','t-tarih','t-gun'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    FP[id]=flatpickr(el,{
+      dateFormat:"Y-m-d", altInput:true, altFormat:"j F Y",
+      disableMobile:true,
+      onChange:(s,str,inst)=>inst.input.dispatchEvent(new Event('change')),
+    });
+  });
+}
+initDatepickers();
+async function _tariheBurc(t){
+  if(!t) return;
+  try{const d=await jget('/api/burc?tarih='+t);
+    const sel=document.getElementById('o-burc'); if(sel) sel.value=d.ad;
+  }catch(e){}
+}
+function sekmeSync(){
+  Object.values(SYNC).flat().forEach(id=>{
+    const e=document.getElementById(id); if(!e) return;
+    e.addEventListener('change',async()=>{
+      if(_sync_kilit) return; _sync_kilit=true;
+      for(const [_,grup] of Object.entries(SYNC)){
+        if(grup.includes(id)){grup.forEach(g=>_set(g,e.value));}
+      }
+      if(SYNC.tarih.includes(id)) await _tariheBurc(e.value);
+      _sync_kilit=false;
+    });
+  });
+}
+sekmeSync();
+
+// --- Gösterişli gökyüzü süslemeleri ---
+(function gokyuzuSuse(){
+  // yıldız serpintisi (box-shadow ile çok sayıda nokta)
+  function yildizUret(id,adet,renkler){
+    const el=document.getElementById(id); if(!el) return;
+    const W=Math.max(1600,window.innerWidth), H=Math.max(1200,window.innerHeight);
+    let s=[];
+    for(let i=0;i<adet;i++){
+      const x=Math.floor(Math.random()*W), y=Math.floor(Math.random()*H);
+      const c=renkler[Math.floor(Math.random()*renkler.length)];
+      s.push(`${x}px ${y}px 0 0 ${c}`);
+    }
+    el.style.boxShadow=s.join(',');
+  }
+  yildizUret('kat1',150,['#ffffff','#cfd6ff','#e8ecff']);
+  yildizUret('kat2',60,['#ffffff','#ffe9b0','#bcd0ff']);
+
+  // dönen burç halkası (SVG)
+  const halka=document.getElementById('zodyak-halka');
+  if(halka){
+    const C=165,R=132; let svg=`<svg viewBox="0 0 330 330" width="330" height="330">`;
+    svg+=`<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="#c9a84a" stroke-width="1"/>`;
+    svg+=`<circle cx="${C}" cy="${C}" r="${R-26}" fill="none" stroke="#7c83ff" stroke-width="0.6"/>`;
+    BURCLAR.forEach((b,i)=>{
+      const a=(i*30-90)*Math.PI/180;
+      const x=C+(R-13)*Math.cos(a), y=C+(R-13)*Math.sin(a);
+      svg+=`<text x="${x}" y="${y+7}" font-size="20" text-anchor="middle" fill="#e7e8f5">${BURC_GLYPH[b]}</text>`;
+    });
+    svg+='</svg>'; halka.innerHTML=svg;
+  }
+})();
+
+// Açılışta tüm tarih alanlarına bugünü yaz ve burcu senkronla
+(function ilkTarih(){
+  const bugun=new Date();
+  const iso=bugun.getFullYear()+'-'+String(bugun.getMonth()+1).padStart(2,'0')+
+            '-'+String(bugun.getDate()).padStart(2,'0');
+  ['b-tarih','y-tarih','t-tarih','t-gun'].forEach(id=>{const e=document.getElementById(id);if(e&&!e.value)_set(id,iso);});
+  _tariheBurc(iso);
+})();
+
+async function jget(url){const r=await fetch(url);const j=await r.json();
+  if(j.hata) throw new Error(j.hata); return j;}
+
+async function burcBul(){
+  const t=document.getElementById('b-tarih').value;
+  const out=document.getElementById('b-sonuc');
+  if(!t){out.innerHTML='<p class="muted">Lütfen tarih seçin.</p>';return;}
+  try{const d=await jget('/api/burc?tarih='+t);
+    out.innerHTML=`<div class="big">${BURC_GLYPH[d.ad]} ${d.ad}</div>
+      <span class="pill">Element: ${d.element}</span>
+      <span class="pill">Gezegen: ${d.gezegen}</span>
+      <p>${d.ozellik}</p>`;
+  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+}
+
+async function yukselenBul(){
+  const t=document.getElementById('y-tarih').value;
+  const s=document.getElementById('y-saat').value;
+  const sehir=document.getElementById('y-sehir').value;
+  const out=document.getElementById('y-sonuc');
+  if(!t||!s){out.innerHTML='<p class="muted">Tarih ve saat gerekli.</p>';return;}
+  try{
+    const d=await jget(`/api/yukselen?tarih=${t}&saat=${s}&sehir=${sehir}`);
+    let g=`<div class="big">Yükselen: ${BURC_GLYPH[d.yukselen.burc]} ${d.yukselen.burc} ${d.yukselen.derece.toFixed(1)}°</div>`;
+    g+=`<span class="pill">Güneş: ${BURC_GLYPH[d.gunes.ad]} ${d.gunes.ad}</span>`;
+    g+=cizCark(d);
+    g+='<table><tr><th>Gezegen</th><th>Burç</th><th>Derece</th></tr>';
+    d.gezegenler.forEach(p=>{g+=`<tr><td>${GEZ_GLYPH[p.ad]} ${p.ad}</td><td>${BURC_GLYPH[p.burc]} ${p.burc}</td><td>${p.derece.toFixed(1)}°</td></tr>`;});
+    g+='</table>';
+    out.innerHTML=g;
+  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+}
+
+// --- Doğum haritası çarkı (0° Koç solda, saat yönünün tersi) ---
+const ELEMENT_RENK={
+  Koç:'#e0617a',Aslan:'#e0617a',Yay:'#e0617a',          // Ateş
+  Boğa:'#5fbf76',Başak:'#5fbf76',Oğlak:'#5fbf76',        // Toprak
+  İkizler:'#f0c95a',Terazi:'#f0c95a',Kova:'#f0c95a',     // Hava
+  Yengeç:'#46b6c4',Akrep:'#46b6c4',Balık:'#46b6c4'};     // Su
+function pol(cx,cy,r,lon){const th=(180-lon)*Math.PI/180;
+  return [cx+r*Math.cos(th), cy-r*Math.sin(th)];}
+function sektorYol(cx,cy,r1,r2,a1,a2){
+  const [x1,y1]=pol(cx,cy,r2,a1),[x2,y2]=pol(cx,cy,r2,a2);
+  const [x3,y3]=pol(cx,cy,r1,a2),[x4,y4]=pol(cx,cy,r1,a1);
+  return `M${x1} ${y1} A${r2} ${r2} 0 0 0 ${x2} ${y2} L${x3} ${y3} A${r1} ${r1} 0 0 1 ${x4} ${y4} Z`;}
+
+function cizCark(d){
+  const S=380,cx=190,cy=190,rOut=178,rZod=150,rIn=120,rPl=104;
+  let svg=`<svg viewBox="0 0 ${S} ${S}" width="100%" style="max-width:380px">
+    <defs>
+      <radialGradient id="bg" cx="50%" cy="50%" r="65%">
+        <stop offset="0%" stop-color="#1b1f3d"/><stop offset="100%" stop-color="#0c0e1d"/>
+      </radialGradient>
+      <filter id="glow"><feGaussianBlur stdDeviation="1.4" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <circle cx="${cx}" cy="${cy}" r="${rOut}" fill="url(#bg)" stroke="#3a3f70" stroke-width="1.5"/>`;
+
+  // burç sektörleri (element renkli, hafif dolgu) + dereceleme
+  for(let i=0;i<12;i++){
+    const a=i*30, burc=BURCLAR[i], renk=ELEMENT_RENK[burc];
+    svg+=`<path d="${sektorYol(cx,cy,rZod,rOut,a,a+30)}" fill="${renk}" fill-opacity="0.16" stroke="#3a3f70" stroke-width="0.7"/>`;
+    // 5°/1° derece çentikleri
+    for(let k=0;k<30;k++){const aa=a+k; const big=k%10===0;
+      const [t1x,t1y]=pol(cx,cy,rZod,aa),[t2x,t2y]=pol(cx,cy,rZod+(big?9:k%5===0?6:3),aa);
+      svg+=`<line x1="${t1x}" y1="${t1y}" x2="${t2x}" y2="${t2y}" stroke="#5a5f95" stroke-width="${big?1:0.5}"/>`;}
+    const [gx,gy]=pol(cx,cy,(rZod+rOut)/2,a+15);
+    svg+=`<text x="${gx}" y="${gy+5}" fill="${renk}" font-size="15" text-anchor="middle">${BURC_GLYPH[burc]}</text>`;
+  }
+  svg+=`<circle cx="${cx}" cy="${cy}" r="${rZod}" fill="none" stroke="#3a3f70"/>`;
+  svg+=`<circle cx="${cx}" cy="${cy}" r="${rIn}" fill="none" stroke="#2c3160" stroke-dasharray="2 3"/>`;
+
+  // ASC/DSC ekseni
+  const asc=d.yukselen.boylam;
+  const [a1x,a1y]=pol(cx,cy,rOut,asc),[a2x,a2y]=pol(cx,cy,rOut,asc+180);
+  svg+=`<line x1="${a1x}" y1="${a1y}" x2="${a2x}" y2="${a2y}" stroke="#7c83ff" stroke-width="1.6" stroke-opacity="0.7"/>`;
+  const [aLx,aLy]=pol(cx,cy,rOut-12,asc);
+  svg+=`<circle cx="${a1x}" cy="${a1y}" r="3.5" fill="#7c83ff"/>`;
+  svg+=`<text x="${aLx}" y="${aLy+4}" fill="#9aa6ff" font-size="11" font-weight="bold" text-anchor="middle">ASC</text>`;
+
+  // gezegenleri boylama göre sırala ve çakışanları yarıçapta kaydır
+  const gz=d.gezegenler.map(p=>({...p})).sort((x,y)=>x.boylam-y.boylam);
+  let oncekiLon=-99, kat=0;
+  gz.forEach(p=>{
+    if(p.boylam-oncekiLon<11){kat++;}else{kat=0;}
+    oncekiLon=p.boylam;
+    const rr=rPl-kat*15;
+    const [tx,ty]=pol(cx,cy,rZod,p.boylam),[mx,my]=pol(cx,cy,rr+9,p.boylam);
+    svg+=`<line x1="${tx}" y1="${ty}" x2="${mx}" y2="${my}" stroke="#4a4f80" stroke-width="0.7"/>`;
+    const [px,py]=pol(cx,cy,rr,p.boylam);
+    svg+=`<circle cx="${px}" cy="${py}" r="10" fill="#171a30" stroke="#3a3f70"/>`;
+    svg+=`<text x="${px}" y="${py+5}" fill="#fff" font-size="14" text-anchor="middle" filter="url(#glow)">${GEZ_GLYPH[p.ad]}</text>`;
+    const [dx,dy]=pol(cx,cy,rr-15,p.boylam);
+    svg+=`<text x="${dx}" y="${dy+3}" fill="#9aa0c8" font-size="8" text-anchor="middle">${Math.round(p.derece)}°</text>`;
+  });
+  svg+=`<circle cx="${cx}" cy="${cy}" r="2.5" fill="#c9a84a"/>`;
+  svg+='</svg>';
+  return `<div class="cark-sarmal">${svg}${lejant()}</div>`;
+}
+
+// Sembol açıklaması (burçlar + gezegenler)
+function lejant(){
+  let b='<div class="lejant-blok"><div class="lejant-bas">Burçlar</div>';
+  BURCLAR.forEach(bu=>{b+=`<div class="lejant-sat"><span style="color:${ELEMENT_RENK[bu]};width:18px;display:inline-block;text-align:center">${BURC_GLYPH[bu]}</span> ${bu}</div>`;});
+  b+='</div><div class="lejant-blok"><div class="lejant-bas">Gezegenler</div>';
+  for(const [ad,gl] of Object.entries(GEZ_GLYPH)){b+=`<div class="lejant-sat"><span style="width:18px;display:inline-block;text-align:center">${gl}</span> ${ad}</div>`;}
+  b+='</div>';
+  return `<div class="lejant">${b}</div>`;
+}
+
+async function transitBul(){
+  const t=document.getElementById('t-tarih').value;
+  const s=document.getElementById('t-saat').value;
+  const sehir=document.getElementById('t-sehir').value;
+  const gun=document.getElementById('t-gun').value;
+  const out=document.getElementById('t-sonuc');
+  if(!t||!s){out.innerHTML='<p class="muted">Doğum tarihi ve saati gerekli.</p>';return;}
+  try{
+    let url=`/api/transit?tarih=${t}&saat=${s}&sehir=${sehir}`;
+    if(gun) url+='&gun='+gun;
+    const d=await jget(url);
+    let g=`<div class="big">${d.tarih} — Gerçek Transit</div>`;
+    g+=`<span class="pill">Yükselen: ${BURC_GLYPH[d.yukselen.burc]} ${d.yukselen.burc}</span>`;
+    if(!d.yorumlar.length){
+      g+='<p>Bu gün doğum haritanla belirgin bir açı oluşmuyor — sakin bir gün.</p>';
+    }else{
+      d.yorumlar.forEach(b=>{const c=TON_RENK[b.ton]||'#9aa0c8';
+        g+=`<div class="yorum-alan" style="border-left:3px solid ${c}">
+          <b>${GEZ_GLYPH[b.transit]} ${b.transit} ${b.aci} ${b.natal==='Yükselen'?'':GEZ_GLYPH[b.natal]} natal ${b.natal}</b>
+          <span class="muted">(orb ${b.orb}° · ${b.ton})</span><br>${b.metin}</div>`;});
+    }
+    g+='<div style="margin-top:12px"><b style="color:var(--dim);font-size:13px">Bugün gezegenler:</b><br>';
+    d.transit_gezegenler.forEach(p=>{
+      g+=`<span class="pill">${GEZ_GLYPH[p.ad]} ${p.burc} ${p.derece}°</span>`;});
+    g+='</div>';
+    out.innerHTML=g;
+  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+}
+
+async function uyumBul(){
+  const b1=document.getElementById('u-b1').value, b2=document.getElementById('u-b2').value;
+  const out=document.getElementById('u-sonuc');
+  try{const d=await jget(`/api/uyum?b1=${encodeURIComponent(b1)}&b2=${encodeURIComponent(b2)}`);
+    const yildiz='★'.repeat(d.puan)+'☆'.repeat(5-d.puan);
+    out.innerHTML=`<div class="big">${BURC_GLYPH[b1]} ${b1} ♥ ${BURC_GLYPH[b2]} ${b2}</div>
+      <div class="star">${yildiz} <span style="color:var(--dim);font-size:14px">(${d.puan}/5)</span></div>
+      <span class="pill">Açı: ${d.aci}</span><span class="pill">${d.element}</span>
+      <p>${d.yorum}</p>`;
+  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+}
+
+async function uyumMatris(){
+  const out=document.getElementById('u-matris');
+  const d=await jget('/api/uyum/matris');
+  let g='<table><tr><th></th>';
+  d.burclar.forEach(b=>g+=`<th>${BURC_GLYPH[b]}</th>`);g+='</tr>';
+  d.matris.forEach((satir,i)=>{g+=`<tr><th>${BURC_GLYPH[d.burclar[i]]}</th>`;
+    satir.forEach(v=>{const c=v>=5?'#3ad29f':v>=4?'#c9a84a':v>=3?'#9aa0c8':'#e0617a';
+      g+=`<td style="color:${c};font-weight:600">${v}</td>`;});g+='</tr>';});
+  g+='</table><div class="muted">5 = en uyumlu</div>';
+  out.innerHTML=g;
+}
+
+async function yorumBul(){
+  const burc=document.getElementById('o-burc').value;
+  const tip=document.getElementById('o-tip').value;
+  const out=document.getElementById('o-sonuc');
+  const d=await jget(`/api/yorum?burc=${encodeURIComponent(burc)}&tip=${tip}`);
+  if(d.tip==='gunluk'){
+    let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — ${trTarih(d.tarih)}</div>`;
+    for(const [alan,metin] of Object.entries(d.yorumlar))
+      g+=`<div class="yorum-alan"><b>${alan}:</b> ${metin}</div>`;
+    g+=`<span class="pill">Şanslı sayı: ${d.sansli_sayi}</span>
+        <span class="pill">Renk: ${d.sansli_renk}</span>
+        <span class="pill">Ruh hali: ${d.ruh_hali}</span>`;
+    out.innerHTML=g;
+  }else{
+    const gunAd=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+    let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — Haftalık</div>`;
+    const alanlar=['Genel','Aşk','Kariyer & Para','Sağlık & Enerji'];
+    d.gunler.forEach((gun,i)=>{const alan=alanlar[i%4];
+      g+=`<div class="yorum-alan"><b>${gunAd[i]} ${trTarih(gun.tarih,false)}:</b> ${alan} — ${gun.yorumlar[alan]}</div>`;});
+    out.innerHTML=g;
+  }
+}
+</script>
+</body>
+</html>
