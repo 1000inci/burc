@@ -104,6 +104,59 @@ def _burc_ve_derece(boylam):
     return BURC_TROPIK[index], derece
 
 
+# Natal (doğum haritası) gezegenler arası açı tanımları:
+# hedef_derece -> (ad, glyph, orb, ton)
+NATAL_ACILAR = [
+    (0,   "Kavuşum", "☌", 6, "yoğunlaştırıcı"),
+    (60,  "Sekstil", "⚹", 4, "destekleyici"),
+    (90,  "Kare",    "□", 5, "zorlayıcı"),
+    (120, "Üçgen",   "△", 5, "akıcı"),
+    (180, "Karşıt",  "☍", 6, "gerilimli"),
+]
+
+
+def _hangi_ev(boylam, cusps):
+    """Bir boylamın hangi evde (1-12) olduğunu bulur. cusps 12 elemanlı."""
+    boylam = boylam % 360.0
+    for i in range(12):
+        bas = cusps[i] % 360.0
+        son = cusps[(i + 1) % 12] % 360.0
+        genislik = (son - bas) % 360.0
+        icinde = (boylam - bas) % 360.0
+        if icinde < genislik:
+            return i + 1
+    return 1
+
+
+def natal_acilar(gezegenler):
+    """
+    Doğum haritasındaki gezegenler arasındaki belirgin açıları döndürür.
+    gezegenler: [{"ad":..., "boylam":...}, ...]
+    Döner: [{"g1","g2","aci","glyph","orb","ton","boylam1","boylam2"}, ...]
+    """
+    sonuc = []
+    n = len(gezegenler)
+    for i in range(n):
+        for j in range(i + 1, n):
+            b1 = gezegenler[i]["boylam"]
+            b2 = gezegenler[j]["boylam"]
+            fark = abs(b1 - b2) % 360.0
+            if fark > 180:
+                fark = 360 - fark
+            for hedef, ad, glyph, orb, ton in NATAL_ACILAR:
+                sapma = abs(fark - hedef)
+                if sapma <= orb:
+                    sonuc.append({
+                        "g1": gezegenler[i]["ad"], "g2": gezegenler[j]["ad"],
+                        "aci": ad, "glyph": glyph, "orb": round(sapma, 1),
+                        "ton": ton,
+                        "boylam1": gezegenler[i]["boylam"],
+                        "boylam2": gezegenler[j]["boylam"],
+                    })
+                    break
+    return sonuc
+
+
 def _julian_day(yil, ay, gun, saat, dakika, utc_offset):
     """Yerel doğum zamanını UT Julian Day'e çevirir."""
     saat_ut = saat + dakika / 60.0 - utc_offset
@@ -144,23 +197,42 @@ def harita_detay(yil, ay, gun, saat, dakika, enlem, boylam, utc_offset=3.0):
     Döner: {"yukselen": {...}, "gezegenler": [ {...}, ... ]}
     """
     jd = _julian_day(yil, ay, gun, saat, dakika, utc_offset)
-    _cusps, ascmc = swe.houses(jd, enlem, boylam, b'P')
+    cusps, ascmc = swe.houses(jd, enlem, boylam, b'P')
     asc_boylam = ascmc[0]
+    mc_boylam = ascmc[1]
     asc_ad, asc_derece = _burc_ve_derece(asc_boylam)
+    mc_ad, mc_derece = _burc_ve_derece(mc_boylam)
+
+    # 12 ev cusp'ı (Placidus). swe.houses -> cusps[0] kullanılmaz, 1..12 dolu.
+    evler = []
+    for i in range(12):
+        cb = cusps[i] % 360.0
+        eb, ed = _burc_ve_derece(cb)
+        evler.append({"ev": i + 1, "boylam": round(cb, 2),
+                      "burc": eb, "derece": round(ed, 2)})
+    cusp_boylamlari = [e["boylam"] for e in evler]
 
     gezegenler = []
     for ad, pid in GEZEGENLER:
-        konum, _ = swe.calc_ut(jd, pid)
-        boy = konum[0]
+        konum, _ = swe.calc_ut(jd, pid, swe.FLG_SWIEPH | swe.FLG_SPEED)
+        boy = konum[0] % 360.0
+        hiz = konum[3]                       # boylam hızı: <0 ise retro
         burc, derece = _burc_ve_derece(boy)
         gezegenler.append({
             "ad": ad, "burc": burc, "derece": round(derece, 2),
-            "boylam": round(boy % 360, 2),
+            "boylam": round(boy, 2),
+            "retro": bool(hiz < 0),
+            "ev": _hangi_ev(boy, cusp_boylamlari),
         })
+
     return {
         "yukselen": {"burc": asc_ad, "derece": round(asc_derece, 2),
                      "boylam": round(asc_boylam % 360, 2)},
+        "tepe": {"burc": mc_ad, "derece": round(mc_derece, 2),
+                 "boylam": round(mc_boylam % 360, 2)},
+        "evler": evler,
         "gezegenler": gezegenler,
+        "acilar": natal_acilar(gezegenler),
     }
 
 
