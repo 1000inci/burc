@@ -147,6 +147,7 @@
   .uclu .u3 .u3-et{font-size:11px;color:var(--dim);letter-spacing:.4px}
   .uclu .u3 .u3-gl{font-size:26px;line-height:1.1;color:var(--accent)}
   .uclu .u3 .u3-ad{font-size:14px;font-weight:600}
+  .uclu .u3 .u3-el{font-size:11px;opacity:.85;margin-top:1px}
   .retro{color:#e0617a;font-weight:700}
   /* ikincil eylem butonları (paylaş / indir) */
   .eylemler{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -187,6 +188,14 @@
   /* ── İkonlu haplar ── */
   .pill svg{width:14px;height:14px;stroke:currentColor;vertical-align:-2px;margin-right:5px}
   .pill.ikonlu{display:inline-flex;align-items:center}
+  /* ── Uyum görsel barı ── */
+  .uyum-satir{display:flex;align-items:center;gap:12px;margin:16px 0 6px}
+  .uyum-satir .rozet{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid;
+    display:flex;align-items:center;justify-content:center}
+  .uyum-satir .rozet svg{width:22px;height:22px;stroke:currentColor}
+  .uyum-bar{flex:1;height:13px;border-radius:8px;background:var(--bg2);
+    border:1px solid var(--line);overflow:hidden;position:relative}
+  .uyum-dolgu{height:100%;border-radius:8px;transition:width .55s ease}
   @media (prefers-reduced-motion: reduce){
     *{animation:none!important;transition:none!important}
   }
@@ -371,6 +380,13 @@ const ELEMENT_IKON = {
   'Ateş':{renk:'#e0617a',ikon:'ates'}, 'Toprak':{renk:'#5fbf76',ikon:'toprak'},
   'Hava':{renk:'#6ea8ff',ikon:'ruzgar'}, 'Su':{renk:'#46b6c4',ikon:'su'},
 };
+const BURC_ELEMENT = {Koç:'Ateş',Aslan:'Ateş',Yay:'Ateş',Boğa:'Toprak',Başak:'Toprak',
+  Oğlak:'Toprak',İkizler:'Hava',Terazi:'Hava',Kova:'Hava',Yengeç:'Su',Akrep:'Su',Balık:'Su'};
+// element rozeti (küçük ikon dairesi) üretir
+function elementRozet(burc, baslikEk){
+  const e=ELEMENT_IKON[BURC_ELEMENT[burc]]||{renk:'#a78bfa',ikon:'yildizlar'};
+  return `<span class="rozet" title="${burc}: ${BURC_ELEMENT[burc]||''}${baslikEk||''}" style="border-color:${e.renk}66;background:${e.renk}1e;color:${e.renk}">${ICON[e.ikon]}</span>`;
+}
 const TAB_IKON = {burc:'ara',yukselen:'yukselen',transit:'gezegen',uyum:'kalp',yorum:'sohbet'};
 // rozetli kart HTML'i
 function kart(baslik, metin, renk, ikonAdi){
@@ -603,17 +619,25 @@ async function burcBul(btn){
   if(!t){out.innerHTML='<p class="muted">Lütfen tarih seçin.</p>';return;}
   await calis('burc',btn,out,async()=>{
     const d=await jget('/api/burc?tarih='+t);
+    const e=ELEMENT_IKON[d.element]||{renk:'#a78bfa',ikon:'yildizlar'};
+    const gzMetin=(GEZ_GLYPH[d.gezegen]?GEZ_GLYPH[d.gezegen]+' ':'')+d.gezegen;
     out.innerHTML=`<div class="big">${BURC_GLYPH[d.ad]} ${d.ad}</div>
-      <span class="pill">Element: ${d.element}</span>
-      <span class="pill">Gezegen: ${d.gezegen}</span>
-      <p>${d.ozellik}</p>`;
+      <div class="kart-grid">
+        ${kart('Element', d.element, e.renk, e.ikon)}
+        ${kart('Yönetici gezegen', gzMetin, '#c9a84a', 'gezegen')}
+      </div>
+      <p style="margin-top:12px">${d.ozellik}</p>`;
     durumKaydet();
   });
 }
 
-// Büyük Üçlü kartı: Güneş + Ay + Yükselen
-function uc3(et,burc){return `<div class="u3"><div class="u3-et">${et}</div>
-  <div class="u3-gl">${BURC_GLYPH[burc]}</div><div class="u3-ad">${burc}</div></div>`;}
+// Büyük Üçlü kartı: Güneş + Ay + Yükselen (element rengine göre)
+function uc3(et,burc){const c=ELEMENT_RENK[burc]||'#c9a84a';
+  return `<div class="u3" style="border-color:${c}66;background:${c}14">
+    <div class="u3-et">${et}</div>
+    <div class="u3-gl" style="color:${c}">${BURC_GLYPH[burc]}</div>
+    <div class="u3-ad">${burc}</div>
+    <div class="u3-el" style="color:${c}">${BURC_ELEMENT[burc]||''}</div></div>`;}
 
 async function yukselenBul(btn){
   const t=document.getElementById('y-tarih').value;
@@ -782,7 +806,13 @@ async function uyumBul(btn){
   await calis('uyum',btn,out,async()=>{
     const d=await jget(`/api/uyum?b1=${encodeURIComponent(b1)}&b2=${encodeURIComponent(b2)}`);
     const yildiz='★'.repeat(d.puan)+'☆'.repeat(5-d.puan);
+    const renkP=d.puan>=5?'#3ad29f':d.puan>=4?'#c9a84a':d.puan>=3?'#9aa0c8':'#e0617a';
     out.innerHTML=`<div class="big">${BURC_GLYPH[b1]} ${b1} ♥ ${BURC_GLYPH[b2]} ${b2}</div>
+      <div class="uyum-satir">
+        ${elementRozet(b1)}
+        <div class="uyum-bar"><div class="uyum-dolgu" style="width:${d.puan/5*100}%;background:${renkP}"></div></div>
+        ${elementRozet(b2)}
+      </div>
       <div class="star">${yildiz} <span style="color:var(--dim);font-size:14px">(${d.puan}/5)</span></div>
       <span class="pill">Açı: ${d.aci}</span><span class="pill">${d.element}</span>
       <p>${d.yorum}</p>`;
