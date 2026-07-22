@@ -92,6 +92,12 @@
   select option{font-family:inherit;font-size:17px;padding:10px;background:var(--bg2);color:var(--txt)}
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>div{flex:1;min-width:120px}
+  /* Gün / Ay / Yıl açılır menüleri */
+  .tarih3{display:flex;gap:8px}
+  .tarih3 select{padding:12px 6px}
+  .tarih3 #b-gun,.tarih3 #y-gun,.tarih3 #t-gun2{flex:0 0 22%}
+  .tarih3 select[id$="-ay"]{flex:1 1 40%}
+  .tarih3 select[id$="-yil"]{flex:0 0 30%}
   button.go{margin-top:16px;width:100%;padding:12px;border:none;border-radius:10px;
         background:linear-gradient(90deg,var(--accent2),var(--accent));color:#11122a;
         font-weight:700;font-size:15px;cursor:pointer}
@@ -189,7 +195,12 @@
   <div class="panel active" id="p-burc">
     <div class="card">
       <label>Doğum tarihiniz</label>
-      <input type="date" id="b-tarih">
+      <div class="tarih3" id="b-tarih3">
+        <select id="b-gun" aria-label="Gün"></select>
+        <select id="b-ay" aria-label="Ay"></select>
+        <select id="b-yil" aria-label="Yıl"></select>
+      </div>
+      <input type="hidden" id="b-tarih">
       <button class="go" onclick="burcBul(this)">Burcumu Göster</button>
       <div class="result" id="b-sonuc"></div>
     </div>
@@ -199,7 +210,13 @@
   <div class="panel" id="p-yukselen">
     <div class="card">
       <div class="row">
-        <div><label>Doğum tarihi</label><input type="date" id="y-tarih"></div>
+        <div><label>Doğum tarihi</label>
+          <div class="tarih3" id="y-tarih3">
+            <select id="y-gun" aria-label="Gün"></select>
+            <select id="y-ay" aria-label="Ay"></select>
+            <select id="y-yil" aria-label="Yıl"></select>
+          </div>
+          <input type="hidden" id="y-tarih"></div>
         <div><label>Doğum saati</label><input type="time" id="y-saat" value="12:00"></div>
       </div>
       <div class="row">
@@ -217,7 +234,13 @@
     <div class="card">
       <p class="muted" style="margin-top:0">Gerçek astrolojik hesap: bugünkü gezegenlerin doğum haritanla yaptığı açılara göre yorum.</p>
       <div class="row">
-        <div><label>Doğum tarihi</label><input type="date" id="t-tarih"></div>
+        <div><label>Doğum tarihi</label>
+          <div class="tarih3" id="t-tarih3">
+            <select id="t-gun2" aria-label="Gün"></select>
+            <select id="t-ay" aria-label="Ay"></select>
+            <select id="t-yil" aria-label="Yıl"></select>
+          </div>
+          <input type="hidden" id="t-tarih"></div>
         <div><label>Doğum saati</label><input type="time" id="t-saat" value="12:00"></div>
       </div>
       <div class="row">
@@ -324,14 +347,42 @@ const FP={};  // flatpickr örnekleri: {input_id: instance}
 function _val(id){const e=document.getElementById(id);return e?e.value:null;}
 function _set(id,v){
   if(FP[id]){if(FP[id].input.value!==v) FP[id].setDate(v,false);return;}
-  const e=document.getElementById(id);if(e&&e.value!==v)e.value=v;}
+  const e=document.getElementById(id);if(!e)return;
+  if(e._tarih3 && v){                 // Gün/Ay/Yıl açılır menüleri: sessizce doldur
+    const p=v.split('-');
+    e._tarih3.yil.value=String(+p[0]); e._tarih3.ay.value=String(+p[1]); e._tarih3.gun.value=String(+p[2]);
+  }
+  if(e.value!==v)e.value=v;}
 
-// Türkçe takvim (flatpickr). Alt giriş "22 Haziran 2026" gösterir,
-// altta saklanan değer ISO (YYYY-MM-DD) kalır — kod ISO bekliyor.
+// --- Gün / Ay / Yıl açılır menüleri (doğum tarihi için) ---
+// Gizli #<pre>-tarih ISO (YYYY-AA-GG) tutar; tüm kod bu gizli değeri okur.
+function tarih3Kur(pre, gunId){
+  const gun=document.getElementById(gunId||pre+'-gun'),
+        ay=document.getElementById(pre+'-ay'),
+        yil=document.getElementById(pre+'-yil'),
+        hid=document.getElementById(pre+'-tarih');
+  if(!gun||!ay||!yil||!hid) return;
+  for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=d;o.textContent=d;gun.appendChild(o);}
+  AYLAR.forEach((ad,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=ad;ay.appendChild(o);});
+  const buYil=new Date().getFullYear();
+  for(let y=buYil;y>=1920;y--){const o=document.createElement('option');o.value=y;o.textContent=y;yil.appendChild(o);}
+  function guncelle(){
+    const y=+yil.value, m=+ay.value; let d=+gun.value;
+    const sonGun=new Date(y,m,0).getDate();       // ayın gerçek son günü (30 Şubat vb. engeller)
+    if(d>sonGun){d=sonGun; gun.value=String(d);}
+    const iso=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(hid.value!==iso){hid.value=iso; hid.dispatchEvent(new Event('change'));}
+  }
+  [gun,ay,yil].forEach(s=>s.addEventListener('change',guncelle));
+  hid._tarih3={gun,ay,yil};   // _set() geri doldurabilsin
+}
+tarih3Kur('b'); tarih3Kur('y'); tarih3Kur('t','t-gun2');
+
+// Türkçe takvim (flatpickr) — yalnız transit "hangi gün için" alanı (güncele yakın).
 function initDatepickers(){
-  if(!window.flatpickr) return;          // CDN yüklenmediyse native input kalır
+  if(!window.flatpickr) return;          // yüklenmediyse native input kalır
   if(flatpickr.l10ns && flatpickr.l10ns.tr) flatpickr.localize(flatpickr.l10ns.tr);
-  ['b-tarih','y-tarih','t-tarih','t-gun'].forEach(id=>{
+  ['t-gun'].forEach(id=>{
     const el=document.getElementById(id); if(!el) return;
     FP[id]=flatpickr(el,{
       dateFormat:"Y-m-d", altInput:true, altFormat:"j F Y",
