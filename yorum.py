@@ -15,7 +15,15 @@ BURCLAR = [
     "Terazi", "Akrep", "Yay", "Oğlak", "Kova", "Balık",
 ]
 
-# Yaşam alanı -> cümle havuzu
+# Burç -> element (element temelli çeşni cümleleri için)
+BURC_ELEMENT = {
+    "Koç": "Ateş", "Aslan": "Ateş", "Yay": "Ateş",
+    "Boğa": "Toprak", "Başak": "Toprak", "Oğlak": "Toprak",
+    "İkizler": "Hava", "Terazi": "Hava", "Kova": "Hava",
+    "Yengeç": "Su", "Akrep": "Su", "Balık": "Su",
+}
+
+# Yaşam alanı -> cümle havuzu (çeşitlilik için genişletildi)
 HAVUZ = {
     "Genel": [
         "Enerjin yüksek; bugün başladığın işler hızla ilerleyebilir.",
@@ -24,6 +32,12 @@ HAVUZ = {
         "İçgüdülerine güven; sezgilerin bugün oldukça güçlü.",
         "Küçük bir aksilik morali bozmasın, akşama doğru düzelecek.",
         "Yeni bir başlangıç için uygun bir gün; cesur ol.",
+        "Bugün detaylara dikkat etmek seni olası bir hatadan kurtarır.",
+        "Uzun süredir ertelediğin bir işi bitirmek için ideal bir gün.",
+        "Çevrendekilerin desteği bugün beklediğinden fazla olacak.",
+        "Planlarını esnek tut; gün içinde işler yön değiştirebilir.",
+        "Kendine küçük bir mola ver; zihnin berraklaştıkça çözümler netleşir.",
+        "Bugün attığın küçük bir adım ilerideki büyük bir kapıyı aralayabilir.",
     ],
     "Aşk": [
         "İlişkinde içten bir konuşma bağını güçlendirecek.",
@@ -32,6 +46,12 @@ HAVUZ = {
         "Romantik bir sürpriz günü renklendirebilir.",
         "Geçmişten biri yeniden gündeme gelebilir; temkinli ol.",
         "Duygularını ifade etmek için doğru zaman.",
+        "Küçük bir jest, sevdiğin kişiyle aranı belirgin şekilde tazeleyebilir.",
+        "Bugün empati kurmak, olası bir kırgınlığı baştan önleyecek.",
+        "Sosyal bir ortamda tanışacağın biri dikkatini çekebilir.",
+        "İlişkinde dürüstlük bugün en güçlü kozun olacak.",
+        "Kendine ayırdığın zaman, ikili ilişkilerine de olumlu yansıyacak.",
+        "Beklenmedik bir yakınlaşma günü heyecanlandırabilir.",
     ],
     "Kariyer & Para": [
         "İş yerinde fikirlerin takdir görecek, öne çık.",
@@ -40,6 +60,12 @@ HAVUZ = {
         "Ekip çalışması bugün sana avantaj sağlayacak.",
         "Sabırlı ol; sonuçlar düşündüğünden biraz geç gelebilir.",
         "Küçük bir kazanç ya da olumlu bir gelişme mümkün.",
+        "Bir üstünle ya da yetkiliyle kuracağın iletişim işine yarayacak.",
+        "Uzun vadeli bir yatırımı araştırmak için doğru zaman.",
+        "Bugün disiplinli çalışman gözlerden kaçmayacak.",
+        "Yeni bir iş bağlantısı ileride değer kazanabilir.",
+        "Riskli bir harcamayı bir gün ertelemek sana iyi gelecek.",
+        "Yaratıcı bir çözüm, tıkanan bir işi yeniden hareketlendirebilir.",
     ],
     "Sağlık & Enerji": [
         "Bol su iç ve kısa bir yürüyüş enerjini toplar.",
@@ -48,6 +74,32 @@ HAVUZ = {
         "Hareketli bir gün; formunu korumak için ideal.",
         "Uyku düzenine dikkat et, yorgunluk birikmiş olabilir.",
         "Sağlıklı beslenme bugün kendini iyi hissettirecek.",
+        "Doğada geçireceğin kısa bir zaman zihnini tazeleyecek.",
+        "Esneme hareketleri gün boyu biriken gerginliği çözecek.",
+        "Kafein yerine bitki çayı bugün dengeni koruyabilir.",
+        "Bedeninin verdiği sinyalleri dinle; küçük bir molaya ihtiyacın var.",
+        "Erken yatmak yarına çok daha dinç başlamanı sağlayacak.",
+        "Kısa bir dijital detoks zihinsel enerjini yükseltecek.",
+    ],
+}
+
+# Element -> günün "eleman notu" (burcun elementine göre eklenir)
+ELEMENT_NOT = {
+    "Ateş": [
+        "Ateş elementin bugün girişkenliğini artırıyor; inisiyatif al.",
+        "İçindeki kıvılcım yüksek; enerjini doğru hedefe yönlendir.",
+    ],
+    "Toprak": [
+        "Toprak elementin bugün seni sağlam ve gerçekçi tutuyor.",
+        "Sabrın ve istikrarın bugün en güçlü yanların.",
+    ],
+    "Hava": [
+        "Hava elementin zihnini keskinleştiriyor; iletişimde parlıyorsun.",
+        "Fikir alışverişi bugün sana yeni kapılar açabilir.",
+    ],
+    "Su": [
+        "Su elementin sezgilerini güçlendiriyor; iç sesine kulak ver.",
+        "Duygusal derinliğin bugün çevrendekilere şifa olabilir.",
     ],
 }
 
@@ -70,9 +122,13 @@ def gunluk_yorum(burc, gun=None):
     yorumlar = {alan: _secim(cumleler, burc, iso, alan)
                 for alan, cumleler in HAVUZ.items()}
     sansli_sayi = (int(hashlib.md5(f"{burc}{iso}sayi".encode()).hexdigest(), 16) % 9) + 1
+    element = BURC_ELEMENT.get(burc)
+    eleman_not = _secim(ELEMENT_NOT[element], burc, iso, "eleman") if element else None
     return {
         "burc": burc,
         "tarih": iso,
+        "element": element,
+        "eleman_not": eleman_not,
         "yorumlar": yorumlar,
         "sansli_sayi": sansli_sayi,
         "sansli_renk": _secim(RENKLER, burc, iso, "renk"),

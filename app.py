@@ -9,7 +9,8 @@ ve tek sayfalık arayüzü (templates/index.html) gösterir.
     Tarayıcı: http://127.0.0.1:5000
 """
 
-from datetime import datetime
+from datetime import datetime, date
+from functools import lru_cache
 from flask import Flask, render_template, request, jsonify
 
 import burc as burc_mod
@@ -24,6 +25,21 @@ except ImportError:
     ASTRO_VAR = False
 
 app = Flask(__name__)
+
+
+# --- Basit önbellek: harita/transit hesapları girdiye göre deterministiktir.
+# Aynı doğum verisi + gün için Swiss Ephemeris'i tekrar çalıştırmayalım.
+# Not: Çağıranlar dönen sözlüğe üst düzey anahtar eklerken önce sığ kopya alır.
+@lru_cache(maxsize=512)
+def _harita_cached(yil, ay, gun, saat, dakika, enlem, boylam, utc):
+    return astro.harita_detay(yil, ay, gun, saat, dakika, enlem, boylam, utc)
+
+
+@lru_cache(maxsize=512)
+def _transit_cached(yil, ay, gun, saat, dakika, enlem, boylam, utc, hedef_iso):
+    hedef = date.fromisoformat(hedef_iso) if hedef_iso else None
+    return transit_mod.gunluk_transit(
+        yil, ay, gun, saat, dakika, enlem, boylam, utc, hedef)
 
 
 def _utc_elle(request):
@@ -48,6 +64,41 @@ def _coz_utc(request, t, saat, dakika, sehir):
 def _burc_sozluk(b):
     ad, (ay, gun), element, gezegen, ozellik = b
     return {"ad": ad, "element": element, "gezegen": gezegen, "ozellik": ozellik}
+
+
+def _konum_coz(request):
+    """İstekten (enlem, boylam, sehir) çözer; çözülemezse None döndürür."""
+    sehir = request.args.get("sehir", "").lower()
+    if sehir in astro.SEHIRLER:
+        enlem, boylam = astro.SEHIRLER[sehir]
+        return enlem, boylam, sehir
+    try:
+        return float(request.args["enlem"]), float(request.args["boylam"]), sehir
+    except (KeyError, ValueError):
+        return None
+
+
+def _gunluk_transit_vurgu(request):
+    """
+    Yorum sekmesi için: doğum bilgisi verildiyse BUGÜNÜN en belirgin gerçek
+    transitini döndürür. Bilgi eksik ya da astro yoksa None.
+    """
+    if not ASTRO_VAR:
+        return None
+    try:
+        t = datetime.strptime(request.args["tarih"], "%Y-%m-%d")
+        saat, dakika = (int(x) for x in request.args["saat"].split(":"))
+    except (KeyError, ValueError):
+        return None
+    konum = _konum_coz(request)
+    if not konum:
+        return None
+    enlem, boylam, sehir = konum
+    utc = _coz_utc(request, t, saat, dakika, sehir)
+    sonuc = _transit_cached(
+        t.year, t.month, t.day, saat, dakika, enlem, boylam, round(utc, 4), None)
+    yorumlar = sonuc.get("yorumlar") or []
+    return yorumlar[0] if yorumlar else None
 
 
 @app.route("/")
@@ -93,7 +144,8 @@ def api_yukselen():
 
     utc = _coz_utc(request, t, saat, dakika, sehir)
 
-    detay = astro.harita_detay(t.year, t.month, t.day, saat, dakika, enlem, boylam, utc)
+    detay = dict(_harita_cached(
+        t.year, t.month, t.day, saat, dakika, enlem, boylam, round(utc, 4)))
     detay["gunes"] = _burc_sozluk(burc_mod.burc_bul(t.month, t.day))
     detay["utc_kullanilan"] = round(utc, 1)
     detay["utc_otomatik"] = not _utc_elle(request)
@@ -129,8 +181,10 @@ def api_transit():
             return jsonify({"hata": "Hedef gün hatalı."}), 400
 
     utc = _coz_utc(request, t, saat, dakika, sehir)
-    sonuc = transit_mod.gunluk_transit(
-        t.year, t.month, t.day, saat, dakika, enlem, boylam, utc, hedef)
+    hedef_iso = hedef.isoformat() if hedef else None
+    sonuc = dict(_transit_cached(
+        t.year, t.month, t.day, saat, dakika, enlem, boylam,
+        round(utc, 4), hedef_iso))
     sonuc["utc_kullanilan"] = round(utc, 1)
     sonuc["utc_otomatik"] = not _utc_elle(request)
     return jsonify(sonuc)
@@ -169,7 +223,11 @@ def api_yorum():
             g = bas + timedelta(days=i)
             gunler.append(yorum_mod.gunluk_yorum(burc, g))
         return jsonify({"tip": "haftalik", "gunler": gunler})
-    return jsonify({"tip": "gunluk", **yorum_mod.gunluk_yorum(burc)})
+    sonuc = {"tip": "gunluk", **yorum_mod.gunluk_yorum(burc)}
+    vurgu = _gunluk_transit_vurgu(request)
+    if vurgu:
+        sonuc["gercek_transit"] = vurgu
+    return jsonify(sonuc)
 
 
 if __name__ == "__main__":

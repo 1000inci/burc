@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Burç Uygulaması ✦</title>
+<meta name="description" content="Güneş burcu, gerçek yükselen ve doğum haritası, burç uyumu ve günlük/haftalık yorum — Swiss Ephemeris ile gerçek astrolojik hesap.">
+<meta property="og:title" content="Burç Uygulaması ✦">
+<meta property="og:description" content="Gerçek yükselen &amp; doğum haritası, burç uyumu, günlük/haftalık yorum.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="{{ url_for('static', filename='macar-logo.png', _external=True) }}">
+<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="{{ url_for('static', filename='flatpickr/flatpickr.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='flatpickr/themes/dark.css') }}">
 <script src="{{ url_for('static', filename='flatpickr/flatpickr.min.js') }}"></script>
@@ -123,6 +129,31 @@
   .lejant{display:flex;gap:18px;font-size:12.5px}
   .lejant-bas{color:var(--accent);font-weight:600;margin-bottom:4px;font-size:12px}
   .lejant-sat{color:var(--txt);line-height:1.55;white-space:nowrap}
+  /* yükleniyor göstergesi */
+  .yukleniyor{color:var(--dim);font-size:14px;padding:14px 0;text-align:center;
+    animation:nabiz 1.1s ease-in-out infinite}
+  @keyframes nabiz{0%,100%{opacity:.45}50%{opacity:1}}
+  button.go:disabled{opacity:.55;cursor:progress}
+  /* büyük üçlü kartları */
+  .uclu{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+  .uclu .u3{flex:1;min-width:96px;background:var(--bg2);border:1px solid var(--line);
+    border-radius:12px;padding:10px 8px;text-align:center}
+  .uclu .u3 .u3-et{font-size:11px;color:var(--dim);letter-spacing:.4px}
+  .uclu .u3 .u3-gl{font-size:26px;line-height:1.1;color:var(--accent)}
+  .uclu .u3 .u3-ad{font-size:14px;font-weight:600}
+  .retro{color:#e0617a;font-weight:700}
+  /* ikincil eylem butonları (paylaş / indir) */
+  .eylemler{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .mini{flex:1;min-width:130px;padding:9px 12px;border:1px solid var(--line);
+    border-radius:9px;background:var(--bg2);color:var(--txt);font-size:13px;
+    font-family:inherit;cursor:pointer}
+  .mini:hover{border-color:var(--accent2)}
+  .gt-vurgu{margin:10px 0;padding:10px 12px;background:#1a2338;border:1px solid #2c3d63;
+    border-left:3px solid var(--accent2);border-radius:8px;font-size:13.5px}
+  .gt-vurgu b{color:var(--accent2)}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
 </style>
 </head>
 <body>
@@ -152,13 +183,14 @@
 </div>
 
 <div class="wrap">
+<datalist id="sehir-list"></datalist>
 
   <!-- BURÇ BUL -->
   <div class="panel active" id="p-burc">
     <div class="card">
       <label>Doğum tarihiniz</label>
       <input type="date" id="b-tarih">
-      <button class="go" onclick="burcBul()">Burcumu Göster</button>
+      <button class="go" onclick="burcBul(this)">Burcumu Göster</button>
       <div class="result" id="b-sonuc"></div>
     </div>
   </div>
@@ -171,9 +203,11 @@
         <div><label>Doğum saati</label><input type="time" id="y-saat" value="12:00"></div>
       </div>
       <div class="row">
-        <div><label>Doğum yeri</label><select id="y-sehir"></select></div>
+        <div><label>Doğum yeri</label>
+          <input id="y-sehir" list="sehir-list" autocomplete="off"
+                 placeholder="Şehir yazın (örn. İstanbul)" aria-label="Doğum yeri"></div>
       </div>
-      <button class="go" onclick="yukselenBul()">Hesapla</button>
+      <button class="go" onclick="yukselenBul(this)">Hesapla</button>
       <div class="result" id="y-sonuc"></div>
     </div>
   </div>
@@ -187,10 +221,12 @@
         <div><label>Doğum saati</label><input type="time" id="t-saat" value="12:00"></div>
       </div>
       <div class="row">
-        <div><label>Doğum yeri</label><select id="t-sehir"></select></div>
+        <div><label>Doğum yeri</label>
+          <input id="t-sehir" list="sehir-list" autocomplete="off"
+                 placeholder="Şehir yazın (örn. İstanbul)" aria-label="Doğum yeri"></div>
       </div>
       <label>Hangi gün için?</label><input type="date" id="t-gun">
-      <button class="go" onclick="transitBul()">Transit Yorumunu Getir</button>
+      <button class="go" onclick="transitBul(this)">Transit Yorumunu Getir</button>
       <div class="result" id="t-sonuc"></div>
     </div>
   </div>
@@ -202,9 +238,9 @@
         <div><label>1. burç</label><select id="u-b1"></select></div>
         <div><label>2. burç</label><select id="u-b2"></select></div>
       </div>
-      <button class="go" onclick="uyumBul()">Uyumu Göster</button>
+      <button class="go" onclick="uyumBul(this)">Uyumu Göster</button>
       <div class="result" id="u-sonuc"></div>
-      <button class="go" style="background:var(--bg2);color:var(--dim)" onclick="uyumMatris()">Tüm Uyum Matrisi</button>
+      <button class="go" style="background:var(--bg2);color:var(--dim)" onclick="uyumMatris(this)">Tüm Uyum Matrisi</button>
       <div class="result" id="u-matris"></div>
     </div>
   </div>
@@ -218,7 +254,7 @@
           <select id="o-tip"><option value="gunluk">Günlük</option><option value="haftalik">Haftalık</option></select>
         </div>
       </div>
-      <button class="go" onclick="yorumBul()">Yorumu Getir</button>
+      <button class="go" onclick="yorumBul(this)">Yorumu Getir</button>
       <div class="result" id="o-sonuc"></div>
       <div class="muted">Not: Yorumlar şablon temellidir, eğlence amaçlıdır.</div>
     </div>
@@ -252,9 +288,21 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 function doldur(id, arr, mapper){const s=document.getElementById(id);
   arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=mapper?mapper(v):v;s.appendChild(o);});}
 doldur('u-b1',BURCLAR);doldur('u-b2',BURCLAR);doldur('o-burc',BURCLAR);
-if(ASTRO){doldur('y-sehir',SEHIRLER,v=>v[0].toUpperCase()+v.slice(1));
-  doldur('t-sehir',SEHIRLER,v=>v[0].toUpperCase()+v.slice(1));}
-else document.getElementById('y-sonuc').innerHTML='<p class="muted">pyswisseph kurulu değil; yükselen hesabı devre dışı.</p>';
+
+// Şehir: key -> görünen ad, ve serbest metinden key çözümü (autocomplete)
+const SEHIR_ADI={};
+SEHIRLER.forEach(k=>SEHIR_ADI[k]=k[0].toUpperCase()+k.slice(1));
+function sehirKey(val){
+  if(!val) return '';
+  const v=val.trim().toLowerCase();
+  if(SEHIR_ADI[v]) return v;                       // zaten key
+  const hit=SEHIRLER.find(k=>SEHIR_ADI[k].toLowerCase()===v);
+  return hit||v;
+}
+if(ASTRO){
+  const dl=document.getElementById('sehir-list');
+  SEHIRLER.forEach(k=>{const o=document.createElement('option');o.value=SEHIR_ADI[k];dl.appendChild(o);});
+}else document.getElementById('y-sonuc').innerHTML='<p class="muted">pyswisseph kurulu değil; yükselen hesabı devre dışı.</p>';
 
 const TON_RENK={"yoğunlaştırıcı":"#c9a84a","destekleyici":"#3ad29f","akıcı":"#3ad29f",
   "zorlayıcı":"#e0617a","gerilimli":"#e0617a"};
@@ -358,34 +406,109 @@ sekmeSync();
 async function jget(url){const r=await fetch(url);const j=await r.json();
   if(j.hata) throw new Error(j.hata); return j;}
 
-async function burcBul(){
+// --- Yükleniyor durumu + çift tıklama kilidi ---
+const MESGUL=new Set();
+async function calis(anahtar, btn, out, fn){
+  if(MESGUL.has(anahtar)) return;
+  MESGUL.add(anahtar);
+  if(btn) btn.disabled=true;
+  if(out) out.innerHTML='<div class="yukleniyor">✦ Hesaplanıyor…</div>';
+  try{ await fn(); }
+  catch(e){ if(out) out.innerHTML='<p class="muted">'+e.message+'</p>'; }
+  finally{ MESGUL.delete(anahtar); if(btn) btn.disabled=false; }
+}
+
+// --- Paylaşılabilir durum: URL + localStorage ---
+function durumKaydet(){
+  const d={tarih:_val('y-tarih'),saat:_val('y-saat'),sehir:_val('y-sehir'),
+    tab:(document.querySelector('.tab.active')||{}).dataset?.t};
+  try{localStorage.setItem('burc_son',JSON.stringify(d));}catch(e){}
+  const q=new URLSearchParams();
+  if(d.tarih)q.set('tarih',d.tarih); if(d.saat)q.set('saat',d.saat);
+  if(d.sehir)q.set('sehir',d.sehir); if(d.tab)q.set('tab',d.tab);
+  try{history.replaceState(null,'','?'+q.toString());}catch(e){}
+}
+function durumOku(){
+  const p=new URLSearchParams(location.search);
+  if(p.get('tarih')||p.get('sehir')||p.get('tab'))
+    return {tarih:p.get('tarih'),saat:p.get('saat'),sehir:p.get('sehir'),
+            tab:p.get('tab'),paylasim:true};
+  try{const d=JSON.parse(localStorage.getItem('burc_son')||'null');
+    if(d) d.paylasim=false; return d;}catch(e){return null;}
+}
+
+// --- Panoya bağlantı kopyala ---
+async function baglantiKopyala(btn){
+  durumKaydet();
+  try{await navigator.clipboard.writeText(location.href);
+    const esk=btn.textContent; btn.textContent='✓ Kopyalandı';
+    setTimeout(()=>btn.textContent=esk,1600);
+  }catch(e){ prompt('Bağlantıyı kopyalayın:', location.href); }
+}
+
+// --- SVG çarkı PNG olarak indir ---
+function cizimIndir(svgId, dosyaAdi){
+  const svg=document.getElementById(svgId); if(!svg) return;
+  const xml=new XMLSerializer().serializeToString(svg);
+  const b64=btoa(unescape(encodeURIComponent(xml)));
+  const img=new Image();
+  img.onload=()=>{
+    const sc=2, W=380, H=380, c=document.createElement('canvas');
+    c.width=W*sc; c.height=H*sc; const ctx=c.getContext('2d');
+    ctx.fillStyle='#0c0e1d'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.scale(sc,sc); ctx.drawImage(img,0,0,W,H);
+    const a=document.createElement('a');
+    a.download=dosyaAdi||'dogum-haritasi.png'; a.href=c.toDataURL('image/png'); a.click();
+  };
+  img.src='data:image/svg+xml;base64,'+b64;
+}
+
+async function burcBul(btn){
   const t=document.getElementById('b-tarih').value;
   const out=document.getElementById('b-sonuc');
   if(!t){out.innerHTML='<p class="muted">Lütfen tarih seçin.</p>';return;}
-  try{const d=await jget('/api/burc?tarih='+t);
+  await calis('burc',btn,out,async()=>{
+    const d=await jget('/api/burc?tarih='+t);
     out.innerHTML=`<div class="big">${BURC_GLYPH[d.ad]} ${d.ad}</div>
       <span class="pill">Element: ${d.element}</span>
       <span class="pill">Gezegen: ${d.gezegen}</span>
       <p>${d.ozellik}</p>`;
-  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+    durumKaydet();
+  });
 }
 
-async function yukselenBul(){
+// Büyük Üçlü kartı: Güneş + Ay + Yükselen
+function uc3(et,burc){return `<div class="u3"><div class="u3-et">${et}</div>
+  <div class="u3-gl">${BURC_GLYPH[burc]}</div><div class="u3-ad">${burc}</div></div>`;}
+
+async function yukselenBul(btn){
   const t=document.getElementById('y-tarih').value;
   const s=document.getElementById('y-saat').value;
-  const sehir=document.getElementById('y-sehir').value;
+  const sehir=sehirKey(document.getElementById('y-sehir').value);
   const out=document.getElementById('y-sonuc');
   if(!t||!s){out.innerHTML='<p class="muted">Tarih ve saat gerekli.</p>';return;}
-  try{
-    const d=await jget(`/api/yukselen?tarih=${t}&saat=${s}&sehir=${sehir}`);
-    let g=`<div class="big">Yükselen: ${BURC_GLYPH[d.yukselen.burc]} ${d.yukselen.burc} ${d.yukselen.derece.toFixed(1)}°</div>`;
-    g+=`<span class="pill">Güneş: ${BURC_GLYPH[d.gunes.ad]} ${d.gunes.ad}</span>`;
+  await calis('yukselen',btn,out,async()=>{
+    const d=await jget(`/api/yukselen?tarih=${t}&saat=${s}&sehir=${encodeURIComponent(sehir)}`);
+    const ay=(d.gezegenler.find(p=>p.ad==='Ay')||{}).burc;
+    let g=`<div class="uclu">${uc3('Güneş',d.gunes.ad)}${ay?uc3('Ay',ay):''}${uc3('Yükselen',d.yukselen.burc)}</div>`;
+    g+=`<div class="muted" style="margin-top:0">Yükselen ${d.yukselen.derece.toFixed(1)}° · Tepe (MC) ${BURC_GLYPH[d.tepe.burc]} ${d.tepe.burc}</div>`;
     g+=cizCark(d);
-    g+='<table><tr><th>Gezegen</th><th>Burç</th><th>Derece</th></tr>';
-    d.gezegenler.forEach(p=>{g+=`<tr><td>${GEZ_GLYPH[p.ad]} ${p.ad}</td><td>${BURC_GLYPH[p.burc]} ${p.burc}</td><td>${p.derece.toFixed(1)}°</td></tr>`;});
+    g+=`<div class="eylemler">
+      <button class="mini" onclick="cizimIndir('natal-svg','dogum-haritasi.png')">⬇ Haritayı PNG indir</button>
+      <button class="mini" onclick="baglantiKopyala(this)">🔗 Bağlantıyı kopyala</button></div>`;
+    g+='<table><tr><th>Gezegen</th><th>Burç</th><th>Derece</th><th>Ev</th></tr>';
+    d.gezegenler.forEach(p=>{
+      const r=p.retro?' <span class="retro" title="Geri hareket (retro)">℞</span>':'';
+      g+=`<tr><td>${GEZ_GLYPH[p.ad]} ${p.ad}${r}</td><td>${BURC_GLYPH[p.burc]} ${p.burc}</td><td>${p.derece.toFixed(1)}°</td><td>${p.ev||'-'}</td></tr>`;});
     g+='</table>';
+    if(d.acilar&&d.acilar.length){
+      g+='<div class="muted" style="margin-top:12px"><b style="color:var(--dim)">Doğum açıları:</b></div>';
+      d.acilar.forEach(a=>{const c=TON_RENK[a.ton]||'#9aa0c8';
+        g+=`<span class="pill" style="border-color:${c}">${GEZ_GLYPH[a.g1]} ${a.glyph} ${GEZ_GLYPH[a.g2]} ${a.aci}</span>`;});
+    }
     out.innerHTML=g;
-  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+    durumKaydet();
+  });
 }
 
 // --- Doğum haritası çarkı (0° Koç solda, saat yönünün tersi) ---
@@ -403,7 +526,7 @@ function sektorYol(cx,cy,r1,r2,a1,a2){
 
 function cizCark(d){
   const S=380,cx=190,cy=190,rOut=178,rZod=150,rIn=120,rPl=104;
-  let svg=`<svg viewBox="0 0 ${S} ${S}" width="100%" style="max-width:380px">
+  let svg=`<svg id="natal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="100%" style="max-width:380px">
     <defs>
       <radialGradient id="bg" cx="50%" cy="50%" r="65%">
         <stop offset="0%" stop-color="#1b1f3d"/><stop offset="100%" stop-color="#0c0e1d"/>
@@ -427,6 +550,29 @@ function cizCark(d){
   svg+=`<circle cx="${cx}" cy="${cy}" r="${rZod}" fill="none" stroke="#3a3f70"/>`;
   svg+=`<circle cx="${cx}" cy="${cy}" r="${rIn}" fill="none" stroke="#2c3160" stroke-dasharray="2 3"/>`;
 
+  // ev (house) cusp çizgileri ve numaraları
+  if(d.evler){
+    d.evler.forEach(ev=>{
+      const [ex,ey]=pol(cx,cy,rZod,ev.boylam),[ix,iy]=pol(cx,cy,0,ev.boylam);
+      const anaEv=(ev.ev===1||ev.ev===4||ev.ev===7||ev.ev===10);
+      svg+=`<line x1="${ix}" y1="${iy}" x2="${ex}" y2="${ey}" stroke="#3a3f70" stroke-width="${anaEv?1:0.5}" stroke-opacity="${anaEv?0.9:0.5}"/>`;
+      // ev numarasını iki cusp arasının ortasına yaz
+      const sonra=d.evler[ev.ev%12].boylam;
+      let orta=ev.boylam+(((sonra-ev.boylam)%360+360)%360)/2;
+      const [nx,ny]=pol(cx,cy,rIn-9,orta);
+      svg+=`<text x="${nx}" y="${ny+3}" fill="#6b70a0" font-size="8" text-anchor="middle">${ev.ev}</text>`;
+    });
+  }
+
+  // natal gezegen açıları (iç çizgiler, tona göre renk)
+  if(d.acilar){
+    d.acilar.forEach(a=>{
+      const [x1,y1]=pol(cx,cy,rIn,a.boylam1),[x2,y2]=pol(cx,cy,rIn,a.boylam2);
+      const c=TON_RENK[a.ton]||'#9aa0c8';
+      svg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="0.8" stroke-opacity="0.5"/>`;
+    });
+  }
+
   // ASC/DSC ekseni
   const asc=d.yukselen.boylam;
   const [a1x,a1y]=pol(cx,cy,rOut,asc),[a2x,a2y]=pol(cx,cy,rOut,asc+180);
@@ -449,6 +595,7 @@ function cizCark(d){
     svg+=`<text x="${px}" y="${py+5}" fill="#fff" font-size="14" text-anchor="middle" filter="url(#glow)">${GEZ_GLYPH[p.ad]}</text>`;
     const [dx,dy]=pol(cx,cy,rr-15,p.boylam);
     svg+=`<text x="${dx}" y="${dy+3}" fill="#9aa0c8" font-size="8" text-anchor="middle">${Math.round(p.derece)}°</text>`;
+    if(p.retro) svg+=`<text x="${px+9}" y="${py-6}" fill="#e0617a" font-size="8" text-anchor="middle">℞</text>`;
   });
   svg+=`<circle cx="${cx}" cy="${cy}" r="2.5" fill="#c9a84a"/>`;
   svg+='</svg>';
@@ -465,15 +612,15 @@ function lejant(){
   return `<div class="lejant">${b}</div>`;
 }
 
-async function transitBul(){
+async function transitBul(btn){
   const t=document.getElementById('t-tarih').value;
   const s=document.getElementById('t-saat').value;
-  const sehir=document.getElementById('t-sehir').value;
+  const sehir=sehirKey(document.getElementById('t-sehir').value);
   const gun=document.getElementById('t-gun').value;
   const out=document.getElementById('t-sonuc');
   if(!t||!s){out.innerHTML='<p class="muted">Doğum tarihi ve saati gerekli.</p>';return;}
-  try{
-    let url=`/api/transit?tarih=${t}&saat=${s}&sehir=${sehir}`;
+  await calis('transit',btn,out,async()=>{
+    let url=`/api/transit?tarih=${t}&saat=${s}&sehir=${encodeURIComponent(sehir)}`;
     if(gun) url+='&gun='+gun;
     const d=await jget(url);
     let g=`<div class="big">${d.tarih} — Gerçek Transit</div>`;
@@ -490,24 +637,28 @@ async function transitBul(){
     d.transit_gezegenler.forEach(p=>{
       g+=`<span class="pill">${GEZ_GLYPH[p.ad]} ${p.burc} ${p.derece}°</span>`;});
     g+='</div>';
+    g+=`<div class="eylemler"><button class="mini" onclick="baglantiKopyala(this)">🔗 Bağlantıyı kopyala</button></div>`;
     out.innerHTML=g;
-  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+    durumKaydet();
+  });
 }
 
-async function uyumBul(){
+async function uyumBul(btn){
   const b1=document.getElementById('u-b1').value, b2=document.getElementById('u-b2').value;
   const out=document.getElementById('u-sonuc');
-  try{const d=await jget(`/api/uyum?b1=${encodeURIComponent(b1)}&b2=${encodeURIComponent(b2)}`);
+  await calis('uyum',btn,out,async()=>{
+    const d=await jget(`/api/uyum?b1=${encodeURIComponent(b1)}&b2=${encodeURIComponent(b2)}`);
     const yildiz='★'.repeat(d.puan)+'☆'.repeat(5-d.puan);
     out.innerHTML=`<div class="big">${BURC_GLYPH[b1]} ${b1} ♥ ${BURC_GLYPH[b2]} ${b2}</div>
       <div class="star">${yildiz} <span style="color:var(--dim);font-size:14px">(${d.puan}/5)</span></div>
       <span class="pill">Açı: ${d.aci}</span><span class="pill">${d.element}</span>
       <p>${d.yorum}</p>`;
-  }catch(e){out.innerHTML='<p class="muted">'+e.message+'</p>';}
+  });
 }
 
-async function uyumMatris(){
+async function uyumMatris(btn){
   const out=document.getElementById('u-matris');
+  await calis('matris',btn,out,async()=>{
   const d=await jget('/api/uyum/matris');
   let g='<table><tr><th></th>';
   d.burclar.forEach(b=>g+=`<th>${BURC_GLYPH[b]}</th>`);g+='</tr>';
@@ -516,30 +667,58 @@ async function uyumMatris(){
       g+=`<td style="color:${c};font-weight:600">${v}</td>`;});g+='</tr>';});
   g+='</table><div class="muted">5 = en uyumlu</div>';
   out.innerHTML=g;
+  });
 }
 
-async function yorumBul(){
+async function yorumBul(btn){
   const burc=document.getElementById('o-burc').value;
   const tip=document.getElementById('o-tip').value;
   const out=document.getElementById('o-sonuc');
-  const d=await jget(`/api/yorum?burc=${encodeURIComponent(burc)}&tip=${tip}`);
-  if(d.tip==='gunluk'){
-    let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — ${trTarih(d.tarih)}</div>`;
-    for(const [alan,metin] of Object.entries(d.yorumlar))
-      g+=`<div class="yorum-alan"><b>${alan}:</b> ${metin}</div>`;
-    g+=`<span class="pill">Şanslı sayı: ${d.sansli_sayi}</span>
-        <span class="pill">Renk: ${d.sansli_renk}</span>
-        <span class="pill">Ruh hali: ${d.ruh_hali}</span>`;
-    out.innerHTML=g;
-  }else{
-    const gunAd=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
-    let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — Haftalık</div>`;
-    const alanlar=['Genel','Aşk','Kariyer & Para','Sağlık & Enerji'];
-    d.gunler.forEach((gun,i)=>{const alan=alanlar[i%4];
-      g+=`<div class="yorum-alan"><b>${gunAd[i]} ${trTarih(gun.tarih,false)}:</b> ${alan} — ${gun.yorumlar[alan]}</div>`;});
-    out.innerHTML=g;
-  }
+  // Doğum bilgisi (yükselen sekmesinden senkron) varsa gerçek transit vurgusu ekle
+  const bt=_val('y-tarih'), bs=_val('y-saat'), bsehir=sehirKey(_val('y-sehir')||'');
+  await calis('yorum',btn,out,async()=>{
+    let url=`/api/yorum?burc=${encodeURIComponent(burc)}&tip=${tip}`;
+    if(ASTRO && tip==='gunluk' && bt && bs && bsehir)
+      url+=`&tarih=${bt}&saat=${bs}&sehir=${encodeURIComponent(bsehir)}`;
+    const d=await jget(url);
+    if(d.tip==='gunluk'){
+      let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — ${trTarih(d.tarih)}</div>`;
+      if(d.gercek_transit){const b=d.gercek_transit;
+        g+=`<div class="gt-vurgu">🌌 <b>Bugünün gerçek transiti:</b> ${GEZ_GLYPH[b.transit]} ${b.transit} ${b.aci} ${b.natal==='Yükselen'?'':GEZ_GLYPH[b.natal]||''} natal ${b.natal}<br>${b.metin}</div>`;}
+      if(d.eleman_not)
+        g+=`<div class="yorum-alan" style="border-left:3px solid var(--accent)"><b>${d.element}:</b> ${d.eleman_not}</div>`;
+      for(const [alan,metin] of Object.entries(d.yorumlar))
+        g+=`<div class="yorum-alan"><b>${alan}:</b> ${metin}</div>`;
+      g+=`<span class="pill">Şanslı sayı: ${d.sansli_sayi}</span>
+          <span class="pill">Renk: ${d.sansli_renk}</span>
+          <span class="pill">Ruh hali: ${d.ruh_hali}</span>`;
+      out.innerHTML=g;
+    }else{
+      const gunAd=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+      let g=`<div class="big">${BURC_GLYPH[burc]} ${burc} — Haftalık</div>`;
+      const alanlar=['Genel','Aşk','Kariyer & Para','Sağlık & Enerji'];
+      d.gunler.forEach((gun,i)=>{const alan=alanlar[i%4];
+        g+=`<div class="yorum-alan"><b>${gunAd[i]} ${trTarih(gun.tarih,false)}:</b> ${alan} — ${gun.yorumlar[alan]}</div>`;});
+      out.innerHTML=g;
+    }
+  });
 }
+
+// --- Açılışta paylaşılan link / son kullanılan bilgiyi uygula ---
+(function durumUygula(){
+  const d=durumOku(); if(!d) return;
+  if(d.tarih)['b-tarih','y-tarih','t-tarih'].forEach(id=>_set(id,d.tarih));
+  if(d.saat)['y-saat','t-saat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=d.saat;});
+  if(d.sehir)['y-sehir','t-sehir'].forEach(id=>{const e=document.getElementById(id);
+    if(e)e.value=SEHIR_ADI[sehirKey(d.sehir)]||d.sehir;});
+  if(d.tarih) _tariheBurc(d.tarih);
+  const hedef=d.tab||'burc';
+  const tabEl=document.querySelector('.tab[data-t="'+hedef+'"]');
+  if(tabEl) tabEl.click();
+  if(d.paylasim){  // yalnız paylaşılan bağlantıda otomatik hesapla
+    ({burc:burcBul,yukselen:yukselenBul,transit:transitBul,yorum:yorumBul}[hedef]||(()=>{}))();
+  }
+})();
 </script>
 </body>
 </html>
