@@ -1,7 +1,7 @@
 #!/bin/bash
 # burc deploy — A1 sunucusunda: GitHub'dan son sürümü çek, bağımlılıkları güncelle, servisi yenile
 set -e
-BRANCH="claude/1000inci-web-integration-cRh3B"
+BRANCH="main"
 cd /opt/burc
 echo "[*] GitHub'dan çekiliyor ($BRANCH)..."
 git fetch origin "$BRANCH"
